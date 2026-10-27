@@ -1,7 +1,8 @@
-use std::{collections::HashMap, fs, path::Path};
+use std::{collections::HashMap, fmt::Display, fs, path::Path};
 
 type MarkovChain = HashMap<String, HashMap<char, u32>>;
 type DataSet = Vec<Vec<char>>;
+type Range = (usize, usize);
 
 const WORDLIST_FR_PATH: &str = "dataset/fr/words.txt";
 const CHAIN_ORDER: usize = 5;
@@ -19,6 +20,24 @@ fn main() {
     print_chain(&chain);
 }
 
+fn _print_2d_array<T: Display>(xss: &[&[T]]) {
+    print!("[");
+    for (i, xs) in xss.iter().enumerate() {
+        if i != 0 {
+            print!(",");
+        }
+        print!("(");
+        for (j, x) in xs.iter().enumerate() {
+            if j != 0 {
+                print!(":");
+            }
+            print!("{x}")
+        }
+        print!(")");
+    }
+    print!("]");
+}
+
 fn format_txt(s: &str, o: usize) -> DataSet {
     s.split("\r\n")
         .map(|x| {
@@ -34,10 +53,10 @@ fn make_chain(outer_vec: &DataSet) -> MarkovChain {
     if outer_vec.len() == 0 {
         panic!("Vector of formated data isn't populated");
     }
-    let order = outer_vec[0]
-        .iter()
-        .fold(0, |acc, x| if *x == '#' { acc + 1 } else { acc });
+
+    let order = outer_vec[0].iter().filter(|x| **x == '#').count();
     let mut chain: MarkovChain = HashMap::new();
+
     for inner_vec in outer_vec {
         for i in 0..inner_vec.len() - order {
             let outer_key = inner_vec[i..i + order]
