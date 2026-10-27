@@ -1,5 +1,8 @@
 use std::{collections::HashMap, fs, path::Path};
 
+type MarkovChain = HashMap<String, HashMap<char, u32>>;
+type DataSet = Vec<Vec<char>>;
+
 const WORDLIST_FR_PATH: &str = "dataset/fr/words.txt";
 const CHAIN_ORDER: usize = 5;
 
@@ -16,7 +19,7 @@ fn main() {
     print_chain(&chain);
 }
 
-fn format_txt(s: &str, o: usize) -> Vec<Vec<char>> {
+fn format_txt(s: &str, o: usize) -> DataSet {
     s.split("\r\n")
         .map(|x| {
             format!("{}{x}$", vec!["#"; o].join(""))
@@ -27,14 +30,14 @@ fn format_txt(s: &str, o: usize) -> Vec<Vec<char>> {
         .collect()
 }
 
-fn make_chain(outer_vec: &Vec<Vec<char>>) -> HashMap<String, HashMap<char, u32>> {
+fn make_chain(outer_vec: &DataSet) -> MarkovChain {
     if outer_vec.len() == 0 {
         panic!("Vector of formated data isn't populated");
     }
     let order = outer_vec[0]
         .iter()
         .fold(0, |acc, x| if *x == '#' { acc + 1 } else { acc });
-    let mut chain: HashMap<String, HashMap<char, u32>> = HashMap::new();
+    let mut chain: MarkovChain = HashMap::new();
     for inner_vec in outer_vec {
         for i in 0..inner_vec.len() - order {
             let outer_key = inner_vec[i..i + order]
@@ -71,7 +74,7 @@ fn _print_bytes(s: &str) {
     }
 }
 
-fn _print_formatted_txt(v: &Vec<Vec<char>>) {
+fn _print_formatted_txt(v: &DataSet) {
     for word in v.iter() {
         let s = word.iter().fold(String::from(""), |acc, x| {
             if acc != "" {
@@ -84,7 +87,7 @@ fn _print_formatted_txt(v: &Vec<Vec<char>>) {
     }
 }
 
-fn print_chain(chain: &HashMap<String, HashMap<char, u32>>) {
+fn print_chain(chain: &MarkovChain) {
     for (out_k, out_v) in chain {
         println!("[{out_k}]");
         for (in_k, in_v) in out_v {
