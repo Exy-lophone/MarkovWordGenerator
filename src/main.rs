@@ -1,9 +1,9 @@
-use std::{collections::HashMap, fmt::Display, fs, path::Path};
-
-type MarkovChain = HashMap<String, HashMap<char, u32>>;
+use rand::random_range;
+use std::{collections::HashMap, fs, path::Path};
+type MarkovChain = HashMap<String, HashMap<char, i32>>;
 
 const WORDLIST_FR_PATH: &str = "dataset/fr/words.txt";
-const CHAIN_ORDER: usize = 2;
+const CHAIN_ORDER: usize = 4;
 
 fn main() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -12,7 +12,10 @@ fn main() {
         .expect("Couldn't parse path into string");
     let txt = fs::read_to_string(path).expect("Couldn't open or read file");
     let chain = make_chain(&txt, CHAIN_ORDER);
-    _print_chain(&chain);
+    let generated_words = generate_words(&chain, 10);
+    for word in generated_words {
+        println!("Generated: {word}");
+    }
 }
 
 fn make_chain(txt: &str, order: usize) -> MarkovChain {
@@ -30,15 +33,7 @@ fn make_chain(txt: &str, order: usize) -> MarkovChain {
 
     for inner_vec in data {
         for i in 0..inner_vec.len() - order {
-            let outer_key = inner_vec[i..i + order]
-                .iter()
-                .fold(String::from(""), |acc, x| {
-                    if acc != "" {
-                        format!("{acc}:{x}")
-                    } else {
-                        x.to_string()
-                    }
-                });
+            let outer_key: String = inner_vec[i..i + order].iter().collect();
             let inner_key = inner_vec[i + order];
             if let Some(inner_map) = chain.get_mut(&outer_key) {
                 if let Some(count) = inner_map.get_mut(&inner_key) {
@@ -52,6 +47,63 @@ fn make_chain(txt: &str, order: usize) -> MarkovChain {
         }
     }
     chain
+}
+
+fn generate_words(chain: &MarkovChain, quantity: usize) -> Vec<String> {
+    let quantity = if quantity == 0 { 1 } else { quantity };
+    let mut generated: Vec<String> = Vec::with_capacity(quantity);
+    let order = match chain.keys().next() {
+        Some(x) => {
+            let count = x.chars().count();
+            if count == 0 {
+                panic!("Markov chain isn't properly formated !")
+            }
+            count
+        }
+        None => panic!("Markov chain is empty !"),
+    };
+
+    for i in 0..quantity {
+        let mut word = vec!['#'; order];
+        loop {
+            let key: String = word[word.len() - order..].iter().collect();
+            let value = match chain.get(&key) {
+                Some(x) => x,
+                None => {
+                    word.push('$');
+                    break;
+                }
+            };
+            let (ranges, max) = get_ranges(value);
+            let rnd = random_range(0..max);
+            for range in ranges {
+                if rnd >= range.1 && rnd <= range.2 {
+                    word.push(range.0);
+                    if range.0 == '$' {
+                        break;
+                    }
+                }
+            }
+        }
+        generated.push(
+            word.iter()
+                .filter(|x| !(**x == '$' || **x == '#'))
+                .collect(),
+        );
+    }
+    generated
+}
+
+fn get_ranges(hmap: &HashMap<char, i32>) -> (Vec<(char, i32, i32)>, i32) {
+    let mut ranges = Vec::with_capacity(hmap.len());
+    let mut tmp = -1;
+    let mut sum = 0;
+    for (k, v) in hmap {
+        ranges.push((*k, tmp + 1, tmp + v));
+        tmp += v;
+        sum += v;
+    }
+    (ranges, sum)
 }
 
 fn _print_chain(chain: &MarkovChain) {
