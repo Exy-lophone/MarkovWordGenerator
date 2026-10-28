@@ -63,7 +63,7 @@ fn generate_words(chain: &MarkovChain, quantity: usize) -> Vec<String> {
         None => panic!("Markov chain is empty !"),
     };
 
-    for i in 0..quantity {
+    for _ in 0..quantity {
         let mut word = vec!['#'; order];
         loop {
             let key: String = word[word.len() - order..].iter().collect();
