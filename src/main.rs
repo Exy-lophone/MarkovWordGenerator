@@ -1,17 +1,44 @@
 use rand::random_range;
-use std::{collections::HashMap, env, fs, path::Path};
+use std::{collections::HashMap, env, fmt::Display, fs, path::Path, usize};
 
 type MarkovChain = HashMap<String, HashMap<char, i32>>;
 
 const WORDLIST_FR_PATH: &str = "dataset/fr/words.txt";
-const HELP_STRING: &str = "usage: mwg [-o order] [-w quantity]\n----------- options -----------\n-o order\tindicate the order of the markov chain\n-w quantity\tindicate the quantity of word to generate\n--help\t\tprint this help message";
+const HELP_STRING: &str = "usage: mwg [-o order] [-w quantity]\n----------- options -----------\n-o order\tindicate the order of the markov chain (MAX=10)\n-w quantity\tindicate the quantity of word to generate (MAX=1000)\n--help\t\tprint this help message";
 const ORDER_FLAG: &str = "-o";
 const QUANT_FLAG: &str = "-w";
 const HELP_FLAG: &str = "--help";
+const MAX_ORDER: usize = 10;
+const MAX_QUANT: usize = 1000;
 
 struct Flags {
     order: usize,
     quantity: usize,
+}
+
+impl Flags {
+    fn new() -> Flags {
+        Flags {
+            order: 3,
+            quantity: 5,
+        }
+    }
+
+    fn set_order(&mut self, new_order: usize) {
+        assert!(
+            new_order <= MAX_ORDER,
+            "Order \"{new_order}\" exceeded limit \"{MAX_ORDER}\"\n{HELP_STRING}"
+        );
+        self.order = new_order;
+    }
+
+    fn set_quantity(&mut self, new_quant: usize) {
+        assert!(
+            new_quant <= MAX_QUANT,
+            "Quantity \"{new_quant}\" exceeded limit \"{MAX_QUANT}\"\n{HELP_STRING}"
+        );
+        self.quantity = new_quant;
+    }
 }
 
 fn main() {
@@ -22,29 +49,26 @@ fn main() {
         return;
     }
 
-    let mut flags: Flags = Flags {
-        order: 3,
-        quantity: 5,
-    };
+    let mut flags: Flags = Flags::new();
 
     let mut i = 1;
     while i < 4 {
         if let Some(flag) = args.get(i) {
             match flag.as_str() {
-                ORDER_FLAG => {
-                    flags.order = args
-                        .get(i + 1)
+                ORDER_FLAG => flags.set_order(
+                    args.get(i + 1)
                         .expect(format!("\"order\" isn't specified\n{HELP_STRING}").as_str())
                         .parse::<usize>()
-                        .expect(format!("\"order\" should be a number\n{HELP_STRING}").as_str());
-                }
-                QUANT_FLAG => {
-                    flags.quantity = args
-                        .get(i + 1)
+                        .expect(format!("\"order\" should be a number\n{HELP_STRING}").as_str()),
+                ),
+
+                QUANT_FLAG => flags.set_quantity(
+                    args.get(i + 1)
                         .expect(format!("\"quantity\" isn't specified\n{HELP_STRING}").as_str())
                         .parse::<usize>()
-                        .expect(format!("\"quantity\" should be a number\n{HELP_STRING}").as_str());
-                }
+                        .expect(format!("\"quantity\" should be a number\n{HELP_STRING}").as_str()),
+                ),
+
                 HELP_FLAG => println!("{HELP_STRING}"),
                 _ => {
                     panic!("{flag} | Invalid argument\n{HELP_STRING}");
@@ -54,6 +78,7 @@ fn main() {
         i += 2;
     }
 
+    println!("Order: {}\nQuantity: {}", flags.order, flags.quantity);
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join(WORDLIST_FR_PATH)
         .into_string()
