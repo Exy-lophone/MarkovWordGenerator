@@ -1,18 +1,66 @@
 use rand::random_range;
-use std::{collections::HashMap, fs, path::Path};
+use std::{collections::HashMap, env, fs, path::Path};
+
 type MarkovChain = HashMap<String, HashMap<char, i32>>;
 
 const WORDLIST_FR_PATH: &str = "dataset/fr/words.txt";
-const CHAIN_ORDER: usize = 4;
+const HELP_STRING: &str = "usage: mwg [-o order] [-w quantity]\n----------- options -----------\n-o order\tindicate the order of the markov chain\n-w quantity\tindicate the quantity of word to generate\n--help\t\tprint this help message";
+const ORDER_FLAG: &str = "-o";
+const QUANT_FLAG: &str = "-w";
+const HELP_FLAG: &str = "--help";
+
+struct Flags {
+    order: usize,
+    quantity: usize,
+}
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    if !(args.len() > 1) {
+        println!("{HELP_STRING}");
+        return;
+    }
+
+    let mut flags: Flags = Flags {
+        order: 3,
+        quantity: 5,
+    };
+
+    let mut i = 1;
+    while i < 4 {
+        if let Some(flag) = args.get(i) {
+            match flag.as_str() {
+                ORDER_FLAG => {
+                    flags.order = args
+                        .get(i + 1)
+                        .expect(format!("\"order\" isn't specified\n{HELP_STRING}").as_str())
+                        .parse::<usize>()
+                        .expect(format!("\"order\" should be a number\n{HELP_STRING}").as_str());
+                }
+                QUANT_FLAG => {
+                    flags.quantity = args
+                        .get(i + 1)
+                        .expect(format!("\"quantity\" isn't specified\n{HELP_STRING}").as_str())
+                        .parse::<usize>()
+                        .expect(format!("\"quantity\" should be a number\n{HELP_STRING}").as_str());
+                }
+                HELP_FLAG => println!("{HELP_STRING}"),
+                _ => {
+                    panic!("{flag} | Invalid argument\n{HELP_STRING}");
+                }
+            }
+        }
+        i += 2;
+    }
+
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join(WORDLIST_FR_PATH)
         .into_string()
         .expect("Couldn't parse path into string");
     let txt = fs::read_to_string(path).expect("Couldn't open or read file");
-    let chain = make_chain(&txt, CHAIN_ORDER);
-    let generated_words = generate_words(&chain, 10);
+    let chain = make_chain(&txt, flags.order);
+    let generated_words = generate_words(&chain, flags.quantity);
     for word in generated_words {
         println!("Generated: {word}");
     }
